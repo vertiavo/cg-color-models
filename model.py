@@ -1,9 +1,12 @@
+from tkinter import IntVar
+
+
 class Rgb(object):
 
-    def __init__(self, red, green, blue):
-        self._red = red
-        self._green = green
-        self._blue = blue
+    def __init__(self):
+        self._red = IntVar()
+        self._green = IntVar()
+        self._blue = IntVar()
 
     @property
     def red(self):
@@ -32,11 +35,11 @@ class Rgb(object):
 
 class Cmyk(object):
 
-    def __init__(self, cyan, magenta, yellow, black):
-        self._cyan = cyan
-        self._magenta = magenta
-        self._yellow = yellow
-        self._black = black
+    def __init__(self):
+        self._cyan = IntVar()
+        self._magenta = IntVar()
+        self._yellow = IntVar()
+        self._black = IntVar()
 
     @property
     def cyan(self):
