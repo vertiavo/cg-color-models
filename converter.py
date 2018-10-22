@@ -25,18 +25,10 @@ class Converter:
         self.converted_color.grid(row=1, column=2)
 
         # Values for entry and scale in RGB
-        self.rgb = Rgb()
-        self.rgb.red.trace_add("write", self.callback)
-        self.rgb.green.trace_add("write", self.callback)
-        self.rgb.blue.trace_add("write", self.callback)
+        self.rgb = self.initialize_rgb()
 
         # Values for entry and scale in CMYK
-        self.cmyk = Cmyk()
-        self.cmyk.cyan.trace_add("write", self.callback)
-        self.cmyk.magenta.trace_add("write", self.callback)
-        self.cmyk.yellow.trace_add("write", self.callback)
-        self.cmyk.black.trace_add("write", self.callback)
-
+        self.cmyk = self.initialize_cmyk()
         # Color preview panel
         self.canvas = Canvas(main_frame, width=300, height=300)
         self.canvas.create_rectangle(0, 0, 300, 300, fill=self.DEFAULT_COLOR)
@@ -58,12 +50,29 @@ class Converter:
                     command=self.change_panel).grid(row=1, column=1)
         radio_button_frame.grid(row=0, columnspan=2)
 
+    def initialize_rgb(self):
+        rgb = Rgb()
+        rgb.red.trace_add("write", self.callback)
+        rgb.green.trace_add("write", self.callback)
+        rgb.blue.trace_add("write", self.callback)
+
+        return rgb
+
+    def initialize_cmyk(self):
+        cmyk = Cmyk()
+        cmyk.cyan.trace_add("write", self.callback)
+        cmyk.magenta.trace_add("write", self.callback)
+        cmyk.yellow.trace_add("write", self.callback)
+        cmyk.black.trace_add("write", self.callback)
+
+        return cmyk
+
     def callback(self, param1, param2, param3):
-        color = '#%02x%02x%02x' % (self.rgb.red.get(), self.rgb.green.get(), self.rgb.blue.get())
         if self.selected_model.get() is 1:
             self.calculate_cmyk()
-        # else:
-        #     self.calculate_rgb()
+        else:
+            self.calculate_rgb()
+        color = '#%02x%02x%02x' % (self.rgb.red.get(), self.rgb.green.get(), self.rgb.blue.get())
         self.redraw_rectangle(color)
 
     def calculate_cmyk(self):
@@ -71,16 +80,39 @@ class Converter:
         green_ = self.rgb.green.get() / 255
         blue_ = self.rgb.blue.get() / 255
 
-        black_ = 1 - max(red_, green_, blue_)
-        self.cmyk.black.set(black_)
-        self.cmyk.cyan.set((1 - red_ - black_) / (1 - black_))
-        self.cmyk.magenta.set((1 - green_ - black_) / (1 - black_))
-        self.cmyk.yellow.set((1 - blue_ - black_) / (1 - black_))
+        black_value = 1 - max(red_, green_, blue_)
+        if black_value == 1:
+            cyan_value = 0.0
+            magenta_value = 0.0
+            yellow_value = 0.0
+        else:
+            cyan_value = (1 - red_ - black_value) / (1 - black_value)
+            magenta_value = (1 - green_ - black_value) / (1 - black_value)
+            yellow_value = (1 - blue_ - black_value) / (1 - black_value)
+
+        self.cmyk.black.set(black_value)
+        self.cmyk.cyan.set(cyan_value)
+        self.cmyk.magenta.set(magenta_value)
+        self.cmyk.yellow.set(yellow_value)
 
         # self.cmyk.black.set(min(1 - self.rgb.red.get(), 1 - self.rgb.green.get(), 1 - self.rgb.blue.get()))
         # self.cmyk.cyan.set((1 - self.rgb.red.get() - self.cmyk.black.get()) / (1 - self.cmyk.black.get()))
         # self.cmyk.magenta.set((1 - self.rgb.green.get() - self.cmyk.black.get()) / (1 - self.cmyk.black.get()))
         # self.cmyk.yellow.set((1 - self.rgb.blue.get() - self.cmyk.black.get()) / (1 - self.cmyk.black.get()))
+
+    def calculate_rgb(self):
+        cyan_ = self.cmyk.cyan.get() / 100
+        magenta_ = self.cmyk.magenta.get() / 100
+        yellow_ = self.cmyk.yellow.get() / 100
+        black_ = self.cmyk.black.get() / 100
+
+        self.rgb.red.set(255 * (1 - cyan_) * (1 - black_))
+        self.rgb.green.set(255 * (1 - magenta_) * (1 - black_))
+        self.rgb.blue.set(255 * (1 - yellow_) * (1 - black_))
+
+        # self.rgb.red.set(1 - min(1, cyan_ * (1 - black_) + black_))
+        # self.rgb.green.set(1 - min(1, magenta_ * (1 - black_) + black_))
+        # self.rgb.blue.set(1 - min(1, yellow_ * (1 - black_) + black_))
 
     def redraw_rectangle(self, color):
         self.canvas.delete(ALL)
@@ -88,6 +120,9 @@ class Converter:
         self.canvas.create_rectangle(*self.SQUARE_COORDS, fill=color)
 
     def change_panel(self):
+        self.rgb = self.initialize_rgb()
+        self.cmyk = self.initialize_cmyk()
+        self.redraw_rectangle(self.DEFAULT_COLOR)
         if self.selected_model.get() is 1:
             print('RGB selected')
             self.create_rgb_panel()
